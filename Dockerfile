@@ -1,14 +1,17 @@
 FROM python:3.6
 
-RUN apt-get update
+COPY requirements.txt ./
+RUN apt-get update \
+		&& apt-get install -y libsasl2-dev libsasl2-2 libsasl2-modules-gssapi-mit \
+		&& pip install pip --upgrade \
+		&& pip install --no-cache-dir -r requirements.txt \
+        && apt-get clean && mkdir -p /root/.dbt
 
-RUN apt-get install -y python-pip netcat
-RUN apt-get install -y python-dev python3-dev
-
-RUN pip install pip --upgrade
 RUN pip install virtualenv
 RUN pip install virtualenvwrapper
 RUN pip install tox
+
+COPY hive_project2/profiles.yml /root/.dbt/
 
 WORKDIR /usr/src/app
 RUN cd /usr/src/app

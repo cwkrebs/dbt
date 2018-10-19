@@ -4,6 +4,7 @@ from dbt.adapters.postgres import PostgresAdapter
 from dbt.adapters.redshift import RedshiftAdapter
 from dbt.adapters.snowflake import SnowflakeAdapter
 from dbt.adapters.bigquery import BigQueryAdapter
+from dbt.adapters.hive import HiveAdapter
 
 import dbt.exceptions
 
@@ -14,7 +15,8 @@ ADAPTER_TYPES = {
     'postgres': PostgresAdapter,
     'redshift': RedshiftAdapter,
     'snowflake': SnowflakeAdapter,
-    'bigquery': BigQueryAdapter
+    'bigquery': BigQueryAdapter,
+    'hive': HiveAdapter
 }
 
 _ADAPTERS = {}

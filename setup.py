@@ -54,5 +54,6 @@ setup(
         'jsonschema==2.6.0',
         'boto3>=1.6.23,<1.8.0',
         'botocore>=1.9.23,<1.11.0',
+        'pyhive[hive]>=0.6.1'
     ]
 )

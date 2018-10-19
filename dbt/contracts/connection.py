@@ -143,13 +143,50 @@ BIGQUERY_CREDENTIALS_CONTRACT = {
     'required': ['method', 'project', 'schema'],
 }
 
+HIVE_CREDENTIALS_CONTRACT = {
+    'type': 'object',
+    'additionalProperties': False,
+    'properties': {
+        'host': {
+            'type': 'string',
+        },
+        'port': {
+            'type': 'integer',
+            'minimum': 0,
+            'maximum': 65535,
+        },
+        'schema': {
+            'type': 'string',
+        },
+        'username': {
+            'type': 'string',
+        },
+        'password': {
+            'type': 'string',
+        },
+        'auth': {
+            'type': 'string',
+        },
+        'thrift_transport': {
+            'type': 'string',
+        },
+        'kerberos_service_name': {
+            'type': 'string',
+        },
+        'configuration': {
+            'type': 'string',
+        },
+    },
+    'required': [],
+}
+
 
 CONNECTION_CONTRACT = {
     'type': 'object',
     'additionalProperties': False,
     'properties': {
         'type': {
-            'enum': ['postgres', 'redshift', 'snowflake', 'bigquery'],
+            'enum': ['postgres', 'redshift', 'snowflake', 'bigquery', 'hive'],
         },
         'name': {
             'type': ['null', 'string'],
@@ -174,6 +211,7 @@ CONNECTION_CONTRACT = {
                 REDSHIFT_CREDENTIALS_CONTRACT,
                 SNOWFLAKE_CREDENTIALS_CONTRACT,
                 BIGQUERY_CREDENTIALS_CONTRACT,
+                HIVE_CREDENTIALS_CONTRACT,
             ],
         }
     },
@@ -239,12 +277,19 @@ class BigQueryCredentials(Credentials):
     def type(self):
         return 'bigquery'
 
+class HiveCredentials(Credentials):
+    SCHEMA = HIVE_CREDENTIALS_CONTRACT
+
+    @property
+    def type(self):
+        return 'hive'
 
 CREDENTIALS_MAPPING = {
     'postgres': PostgresCredentials,
     'redshift': RedshiftCredentials,
     'snowflake': SnowflakeCredentials,
     'bigquery': BigQueryCredentials,
+    'hive': HiveCredentials,
 }
 
 

@@ -3,7 +3,7 @@ from dbt.logger import GLOBAL_LOGGER as logger  # noqa
 from dbt.utils import deep_merge
 from dbt.contracts.connection import POSTGRES_CREDENTIALS_CONTRACT, \
     REDSHIFT_CREDENTIALS_CONTRACT, SNOWFLAKE_CREDENTIALS_CONTRACT, \
-    BIGQUERY_CREDENTIALS_CONTRACT
+    BIGQUERY_CREDENTIALS_CONTRACT, HIVE_CREDENTIALS_CONTRACT
 
 # TODO: add description fields.
 ARCHIVE_TABLE_CONFIG_CONTRACT = {
@@ -265,6 +265,7 @@ PROFILE_INFO_CONTRACT = {
                 REDSHIFT_CREDENTIALS_CONTRACT,
                 SNOWFLAKE_CREDENTIALS_CONTRACT,
                 BIGQUERY_CREDENTIALS_CONTRACT,
+                HIVE_CREDENTIALS_CONTRACT,
             ],
         },
     },
