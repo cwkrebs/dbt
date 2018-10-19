@@ -455,7 +455,7 @@ def filter_null_values(input):
 
 
 def add_ephemeral_model_prefix(s):
-    return '__dbt__CTE__{}'.format(s)
+    return '`__dbt__CTE__{}`'.format(s)
 
 
 def timestring():

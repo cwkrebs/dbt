@@ -1,12 +1,12 @@
 from contextlib import contextmanager
 
 import pyhive
+from pyhive import hive, exc
+from thrift.Thrift import TException
 
 import dbt
 from dbt.adapters.hive.relation import HiveRelation
-
 from dbt.logger import GLOBAL_LOGGER as logger
-from pyhive import hive, exc
 
 
 class HiveAdapter(dbt.adapters.default.DefaultAdapter):
@@ -47,7 +47,10 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
                 auth=cls.coalesce(credentials, 'auth', None),
                 thrift_transport=cls.coalesce(credentials, 'thrift_transport', None),
                 kerberos_service_name=cls.coalesce(credentials, 'kerberos_service_name', None),
-                configuration=cls.coalesce(credentials, 'configuration', None))
+                # configuration=cls.coalesce(credentials, 'configuration', None))
+                # see https://cwiki.apache.org/confluence/display/Hive/Configuration+Properties
+                # TODO checkme
+                configuration={'hive.execution.engine': 'spark', 'hive.txn.timeout': '28800'})
 
             connection.handle = handle
             connection.state = 'open'
@@ -85,8 +88,12 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
         try:
             yield
 
-        except hive.exc as e:
+        except pyhive.exc.Error as e:
             message = "Hive exception :\n{sql}" # TODO FIXME
+            self.handle_error(e, message, sql)
+
+        except TException as e:
+            message = "Thrift exception :\n{sql}" # TODO FIXME
             self.handle_error(e, message, sql)
 
     def begin(self, name):
