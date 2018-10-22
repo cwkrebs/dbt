@@ -78,7 +78,7 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
         logger.debug(message.format(sql=sql))
         logger.debug(error)
         error_msg = "\n".join(
-            [item['message'] for item in error.errors])
+            [resp.status.errorMessage for resp in error.args])
 
         raise dbt.exceptions.DatabaseException(error_msg)
 
@@ -167,6 +167,17 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
             return relations
         finally:
             cursor.close()
+
+    def rename_relation(self, from_relation, to_relation,
+                        model_name=None):
+        self.cache.rename(from_relation, to_relation)
+        rel_type = 'table'
+        if from_relation.type is HiveRelation.View:
+            rel_type = 'view'
+        sql = 'alter {} {} rename to {}'.format(
+            rel_type, from_relation, to_relation)
+
+        connection, cursor = self.add_query(sql, model_name)
 
     def drop_relation(self, relation, model_name=None):
         if dbt.flags.USE_CACHE:
