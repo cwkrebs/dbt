@@ -11,7 +11,9 @@ RUN pip install virtualenv
 RUN pip install virtualenvwrapper
 RUN pip install tox
 
-COPY hive_project2/profiles.yml /root/.dbt/
+COPY ./profiles.yml /root/.dbt/
+
+EXPOSE 8080
 
 WORKDIR /usr/src/app
 RUN cd /usr/src/app

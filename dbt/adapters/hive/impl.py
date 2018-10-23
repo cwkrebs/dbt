@@ -190,3 +190,57 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
         sql = 'drop {} if exists {}'.format(relation.type, relation)
 
         connection, cursor = self.add_query(sql, model_name, auto_begin=False)
+
+    def get_catalog(self, manifest):
+        connection = self.get_connection('catalog')
+        cursor = connection.handle.cursor()
+
+        column_names = (
+            'table_schema',
+            'table_name',
+            'table_type',
+            'table_comment',
+            # does not exist in hive, but included for consistency
+            'table_owner',
+            'column_name',
+            'column_index',
+            'column_type',
+            'column_comment',
+        )
+
+        columns = []
+        try:
+            cursor.execute('show databases')
+            for db, *_ in cursor.fetchall():
+                for relation in self._list_relations(db):
+
+                    try:
+                        cursor.execute('describe {}.{}'.format(db, relation.identifier))
+
+                        col_index = 1
+                        for col_name, data_type, comment, *_ in cursor.fetchall():
+
+                            column_data = (
+                                db,  # table_schema
+                                relation.identifier,  # table_name
+                                relation.type,  # table_type
+                                None,  # table_comment
+                                None,  # table_owner
+                                col_name, # column_name
+                                col_index,  # column_index
+                                data_type,  # column_type
+                                comment,  # column_comment
+                            )
+                            col_index += 1
+
+                            column_dict = dict(zip(column_names, column_data))
+                            columns.append(column_dict)
+                    except exc.OperationalError as error:
+                        logger.debug(error)
+                        error_msg = "\n".join(
+                            [resp.status.errorMessage for resp in error.args])
+
+            return dbt.clients.agate_helper.table_from_data(columns, column_names)
+
+        finally:
+            cursor.close()
