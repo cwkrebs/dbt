@@ -1,8 +1,15 @@
+import getpass
+import time
 from contextlib import contextmanager
 
 import pyhive
+import sasl
+import thrift
+import thrift_sasl
+from TCLIService.ttypes import TOperationState
 from pyhive import hive, exc
 from thrift.Thrift import TException
+from thrift.transport.TTransport import TTransportException
 
 import dbt
 from dbt.adapters.hive.relation import HiveRelation
@@ -45,12 +52,9 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
                 username=cls.coalesce(credentials, 'user', None),
                 password=cls.coalesce(credentials, 'password', None),
                 auth=cls.coalesce(credentials, 'auth', None),
-                thrift_transport=cls.coalesce(credentials, 'thrift_transport', None),
                 kerberos_service_name=cls.coalesce(credentials, 'kerberos_service_name', None),
                 # configuration=cls.coalesce(credentials, 'configuration', None))
-                # see https://cwiki.apache.org/confluence/display/Hive/Configuration+Properties
-                # TODO checkme
-                configuration={'hive.execution.engine': 'spark', 'hive.txn.timeout': '28800'})
+                configuration={'hive.execution.engine': 'spark'})
 
             connection.handle = handle
             connection.state = 'open'
@@ -66,19 +70,57 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
 
         return connection
 
+    def add_query(self, sql, model_name=None, auto_begin=True,
+                  bindings=None, abridge_sql_log=False):
+        connection = self.get_connection(model_name)
+        connection_name = connection.name
+
+        if auto_begin and connection.transaction_open is False:
+            self.begin(connection_name)
+
+        logger.debug('Using {} connection "{}".'
+                     .format(self.type(), connection_name))
+
+        with self.exception_handler(sql, model_name, connection_name):
+            if abridge_sql_log:
+                logger.debug('On %s: %s....', connection_name, sql[0:512])
+            else:
+                logger.debug('On %s: %s', connection_name, sql)
+            pre = time.time()
+
+            cursor = connection.handle.cursor()
+            cursor.execute(sql, bindings,  async_=True)
+            status = cursor.poll().operationState
+            while status in (TOperationState.INITIALIZED_STATE, TOperationState.RUNNING_STATE):
+                logs = cursor.fetch_logs()
+                for message in logs:
+                    logger.info(message)
+
+                status = cursor.poll().operationState
+
+            logger.debug("SQL status: %s in %0.2f seconds",
+                         self.get_status(cursor), (time.time() - pre))
+
+            return connection, cursor
+
     @classmethod
     def close(cls, connection):
         connection.state = 'closed'
-        connection.handle.close()
+        try:
+            connection.handle.close()
+        except TTransportException as e:
+            logger.debug('failed to close connection - ignoring ')
+        finally:
+            connection.handle = None
 
         return connection
 
     @classmethod
-    def handle_error(cls, error, message, sql):
-        logger.debug(message.format(sql=sql))
+    def handle_error(cls, error, message, info):
+        logger.debug(message.format(info=info))
         logger.debug(error)
         error_msg = "\n".join(
-            [resp.status.errorMessage for resp in error.args])
+            [str(arg) for arg in error.args])
 
         raise dbt.exceptions.DatabaseException(error_msg)
 
@@ -88,13 +130,17 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
         try:
             yield
 
+        except pyhive.exc.DatabaseError as e:
+            message = "Hive exception:\n{info}"
+            self.handle_error(e, message, sql)
+
         except pyhive.exc.Error as e:
-            message = "Hive exception :\n{sql}" # TODO FIXME
+            message = "Hive interface exception:\n{info}"
             self.handle_error(e, message, sql)
 
         except TException as e:
-            message = "Thrift exception :\n{sql}" # TODO FIXME
-            self.handle_error(e, message, sql)
+            message = "Thrift exception:\n{info}"
+            self.handle_error(e, message, e.message)
 
     def begin(self, name):
         pass
@@ -200,7 +246,6 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
             'table_name',
             'table_type',
             'table_comment',
-            # does not exist in hive, but included for consistency
             'table_owner',
             'column_name',
             'column_index',
@@ -236,9 +281,7 @@ class HiveAdapter(dbt.adapters.default.DefaultAdapter):
                             column_dict = dict(zip(column_names, column_data))
                             columns.append(column_dict)
                     except exc.OperationalError as error:
-                        logger.debug(error)
-                        error_msg = "\n".join(
-                            [resp.status.errorMessage for resp in error.args])
+                        logger.debug(error) # FIXME
 
             return dbt.clients.agate_helper.table_from_data(columns, column_names)
 
