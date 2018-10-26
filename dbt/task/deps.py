@@ -246,12 +246,11 @@ class GitPackage(Package):
                 dbt.clients.system.remove_file(dest_path)
             else:
                 dbt.clients.system.rmdir(dest_path)
-        # shutil.move(self._checkout(project), dest_path)
+        shutil.move(self._checkout(project), dest_path)
         # is failing in a docker container -- carsten.krebs@gameduell.de
-        if os.path.exists(dest_path):
-            shutil.rmtree(dest_path)
-        shutil.copytree(self._checkout(project), dest_path)
-        shutil.rmtree(self._checkout(project))
+        #reverted
+        #shutil.copytree(self._checkout(project), dest_path)
+        #shutil.rmtree(self._checkout(project))
 
 
 class LocalPackage(Package):
