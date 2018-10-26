@@ -248,7 +248,7 @@ class GitPackage(Package):
                 dbt.clients.system.rmdir(dest_path)
         # shutil.move(self._checkout(project), dest_path)
         # is failing in a docker container -- carsten.krebs@gameduell.de
-        shutil.copy2(self._checkout(project), dest_path)
+        shutil.copytree(self._checkout(project), dest_path)
         shutil.rmtree(self._checkout(project))
 
 
