@@ -455,7 +455,8 @@ def filter_null_values(input):
 
 
 def add_ephemeral_model_prefix(s):
-    return '`__dbt__CTE__{}`'.format(s)
+    # quoting CTE names doesn't works well with Hive, prefix with '__' is not allowed as identifier
+    return 'dbt__CTE__{}'.format(s)
 
 
 def timestring():

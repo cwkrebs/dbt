@@ -83,7 +83,8 @@ def recursively_prepend_ctes(model, manifest):
             cte_to_add, manifest)
 
         _extend_prepended_ctes(prepended_ctes, new_prepended_ctes)
-        new_cte_name = '`__dbt__CTE__{}`'.format(cte_to_add.get('name'))
+        # quoting CTE names doesn't works well with Hive, prefix with '__' is not allowed as identifier
+        new_cte_name = 'dbt__CTE__{}'.format(cte_to_add.get('name'))
         sql = ' {} as (\n{}\n)'.format(new_cte_name, cte_to_add.compiled_sql)
         _add_prepended_cte(prepended_ctes, {'id': cte_id, 'sql': sql})
 
