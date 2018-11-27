@@ -150,11 +150,7 @@ class Compiler(object):
 
         should_wrap = {NodeType.Test, NodeType.Analysis, NodeType.Operation}
         if injected_node.resource_type in should_wrap:
-            # data tests get wrapped in count(*)
-            # TODO : move this somewhere more reasonable
-            if 'data' in injected_node.tags and \
-               is_type(injected_node, NodeType.Test):
-                injected_node.wrapped_sql = injected_node.injected_sql
+            injected_node.wrapped_sql = injected_node.injected_sql
 
         elif is_type(injected_node, NodeType.Archive):
             # unfortunately we do everything automagically for
