@@ -123,8 +123,24 @@ class Compiler(object):
             compiled_node, self.config, manifest)
         context.update(extra_context)
 
+
+        should_wrap = {NodeType.Test, NodeType.Analysis, NodeType.Operation}
+        raw_sql = node.get('raw_sql')
+        if compiled_node.resource_type in should_wrap:
+            # data tests get wrapped in count(*)
+            # TODO : move this somewhere more reasonable
+            if 'data' in compiled_node.tags and \
+                    is_type(compiled_node, NodeType.Test):
+                raw_sql = (
+                        "select count(*) from (\n{test_sql}\n) sbq").format(
+                        test_sql=node.get('raw_sql'))
+            else:
+                # don't wrap schema tests or analyses.
+                pass
+
         compiled_node.compiled_sql = dbt.clients.jinja.get_rendered(
-            node.get('raw_sql'),
+            # node.get('raw_sql'),
+            raw_sql,
             context,
             node)
 
@@ -138,11 +154,6 @@ class Compiler(object):
             # TODO : move this somewhere more reasonable
             if 'data' in injected_node.tags and \
                is_type(injected_node, NodeType.Test):
-                injected_node.wrapped_sql = (
-                    "select count(*) from (\n{test_sql}\n) sbq").format(
-                        test_sql=injected_node.injected_sql)
-            else:
-                # don't wrap schema tests or analyses.
                 injected_node.wrapped_sql = injected_node.injected_sql
 
         elif is_type(injected_node, NodeType.Archive):
